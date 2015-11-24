@@ -1,0 +1,40 @@
+---
+
+- name: ruby | packages | add brightbox GPG key
+  apt_key: url="{{ruby_repo_key_url|default(omit)}}" keyserver="{{ruby_repo_key_server|default(omit)}}" id="{{ruby_repo_key_id|default(omit)}}" state='present'
+
+- name: ruby | packages | add brightbox repository
+  apt_repository: repo='deb {{ruby_repo_url}} {{ansible_distribution_release}} main' state='present'
+  register: ruby_repo
+
+- name: ruby | packages | update apt cache
+  apt: update_cache='yes'
+  when: ruby_repo | changed
+
+- name: ruby | packages | install ruby
+  apt: name='{{ruby_ppa_package}}{% if ruby_version is defined %}={{ruby_version}}{% endif %}' state='present' update_cache='yes' cache_valid_time='3600'
+
+- name: ruby | packages | install ruby-dev
+  apt: name='{{ruby_ppa_dev_package}}' state='present' update_cache='yes' cache_valid_time='3600'
+
+- name: ruby | package | install any additional packages
+  apt: name='{{item}}' state='present' update_cache='yes' cache_valid_time='3600'
+  with_items: ruby_additional_packages
+  when: ruby_additional_packages is defined and ruby_additional_packages != []
+
+- name: ruby | alternatives | update ruby alternatives
+  alternatives: name='ruby' link='/usr/bin/ruby' path='{{ruby_alternatives_ruby_path}}'
+
+- name: ruby | alternatives | update gem alternatives
+  alternatives: name='gem' link='/usr/bin/gem' path='{{ruby_gem_alternatives_gem_path}}'
+
+- name: ruby | gems | set gemrc
+  copy: "content='gem: --no-ri --no-rdoc' dest='/etc/gemrc' owner='root' group='root' mode='0644'"
+
+- name: ruby | gems | install bundler
+  gem: name='bundler' user_install='no' state='present'
+
+- name: ruby | gems | install any additional gems
+  gem: name="{{item}}" user_install='no' state='present'
+  with_items: ruby_gems
+  when: ruby_gems is defined and ruby_gems != []
