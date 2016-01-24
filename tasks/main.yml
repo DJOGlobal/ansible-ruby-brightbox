@@ -11,9 +11,14 @@
   apt: update_cache='yes'
   when: ruby_repo | changed
 
-- name: install ruby
-  apt: name='{{ruby_ppa_package}}{% if ruby_version is defined %}={{ruby_version}}{% endif %}' state='present' update_cache='yes' cache_valid_time='3600'
-
+- name: install latest ruby
+  apt: name='{{ruby_ppa_package}}' state='present' update_cache='yes' cache_valid_time='3600'
+  when: ruby_version is not defined or (ruby_version is defined and ruby_version == 'latest')
+  
+- name: install specific ruby
+  apt: name='{{ruby_ppa_package}}={{ruby_version}}' state='present' update_cache='yes' cache_valid_time='3600'
+  when: ruby_version is defined and ruby_version != 'latest'
+  
 - name: install ruby-dev
   apt: name='{{ruby_ppa_dev_package}}' state='present' update_cache='yes' cache_valid_time='3600'
 
